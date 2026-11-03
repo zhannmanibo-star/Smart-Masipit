@@ -32,8 +32,8 @@ class ChatbotController extends Controller
         try {
             $response = Http::acceptJson()
                 ->withHeaders(['X-API-Key' => $key])
-                ->connectTimeout(3)
-                ->timeout(10)
+                ->connectTimeout(10)
+                ->timeout(75)
                 ->post(
                     rtrim(config('chatbot.url'), '/') . '/chat',
                     ['message' => $message]
