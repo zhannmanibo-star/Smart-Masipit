@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'chatbot' => [
+    'url' => env('CHATBOT_API_URL'),
+    'key' => env('CHATBOT_API_KEY'),
+],
+
 ];
