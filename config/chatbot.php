@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'url' => env('CHATBOT_URL', 'http://127.0.0.1:8001'),
+    'url' => env('CHATBOT_URL'),
     'key' => env('CHATBOT_API_KEY'),
 ];
