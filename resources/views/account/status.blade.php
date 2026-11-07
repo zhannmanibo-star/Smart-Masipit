@@ -22,26 +22,16 @@
 
         main {
             width: 100%;
-            max-width: 600px;
+            max-width: 640px;
             padding: 36px;
             background: white;
             border: 1px solid #dfe5e9;
             border-radius: 14px;
         }
 
-        .brand {
-            color: #16634b;
-            font-weight: 750;
-            letter-spacing: 1px;
-        }
-
+        .brand { color: #16634b; font-weight: 750; letter-spacing: 1px; }
         .muted { color: #60716b; }
-
-        h1 {
-            margin-bottom: 12px;
-            font-size: 27px;
-            line-height: 1.3;
-        }
+        h1 { font-size: 27px; line-height: 1.3; }
 
         .notice {
             margin: 24px 0;
@@ -53,7 +43,8 @@
 
         .reason { white-space: pre-wrap; }
 
-        button {
+        button, .button {
+            display: inline-block;
             padding: 12px 20px;
             border: 0;
             border-radius: 7px;
@@ -62,11 +53,10 @@
             font: inherit;
             font-weight: 600;
             cursor: pointer;
+            text-decoration: none;
         }
 
-        button:hover { background: #103f33; }
-
-        button:focus-visible {
+        :focus-visible {
             outline: 3px solid #d4a843;
             outline-offset: 3px;
         }
@@ -79,7 +69,24 @@
 
     @php
         $user = auth()->user();
+        $application = $user->role === 'resident'
+            ? $user->residentApplication()->first()
+            : null;
     @endphp
+
+    @if (session('success'))
+        <div class="notice" role="status">{{ session('success') }}</div>
+    @endif
+
+    @if ($errors->any())
+        <div class="notice" role="alert">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     @if ($user->account_status === 'pending')
         <h1>Account verification pending</h1>
@@ -89,9 +96,41 @@
         @if ($user->role === 'resident')
             <p>
                 Your account requires verification by the Barangay
-                Secretary or Barangay Captain before you can use
-                resident services.
+                Secretary or Captain before you can use resident services.
             </p>
+
+            @if ($application)
+                <div class="notice">
+                    @if ($application->hasIdentityEvidence())
+                        <strong>ID and selfie submitted</strong>
+                        <p>
+                            Your images are awaiting review.
+                            If you submitted the wrong or unclear images,
+                            you may replace them while your application is pending.
+                        </p>
+                    @else
+                        <strong>ID and camera selfie required</strong>
+                        <p>
+                            Submit your identity images to complete
+                            your application for review.
+                        </p>
+                    @endif
+
+                    <a
+                        class="button"
+                        href="{{ route('account.identity.edit') }}"
+                    >
+                        {{ $application->hasIdentityEvidence()
+                            ? 'Replace ID and selfie'
+                            : 'Submit ID and selfie' }}
+                    </a>
+                </div>
+            @else
+                <p>
+                    Your application record could not be found.
+                    Contact the barangay office.
+                </p>
+            @endif
         @else
             <p>
                 Your staff account is awaiting activation.
@@ -103,8 +142,8 @@
         <h1>Account application not approved</h1>
 
         <p>
-            Please contact the barangay office to clarify your
-            application details.
+            Please contact the barangay office to clarify
+            your application details.
         </p>
 
         @if ($user->rejection_reason)
@@ -116,14 +155,10 @@
 
     @elseif ($user->account_status === 'suspended')
         <h1>Account access suspended</h1>
-
-        <p>
-            Please contact the barangay office regarding your account.
-        </p>
+        <p>Please contact the barangay office regarding your account.</p>
 
     @else
         <h1>Account review required</h1>
-
         <p>
             Your account is not currently eligible to access services.
             Please contact the barangay office to review your account
@@ -137,7 +172,7 @@
     </div>
 
     <p class="muted">
-        You may sign in again to check your account status.
+        Refresh this page or sign in again to check your account status.
     </p>
 
     <form method="POST" action="{{ route('logout') }}">

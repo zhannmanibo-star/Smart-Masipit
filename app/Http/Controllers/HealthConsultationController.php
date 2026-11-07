@@ -88,11 +88,24 @@ class HealthConsultationController extends Controller
     ): RedirectResponse {
         $this->authorizeHealthStaff($request);
 
-        // Normalize only string inputs before validating.
         foreach (['reason_for_visit', 'consultation_notes'] as $field) {
             if (is_string($request->input($field))) {
                 $request->merge([
                     $field => trim($request->input($field)),
+                ]);
+            }
+        }
+
+        // Blank readings are stored as null, never as zero.
+        // Do not cast before validation, so invalid input is rejected.
+        foreach (['bp_systolic', 'bp_diastolic'] as $field) {
+            $value = $request->input($field);
+
+            if (is_string($value)) {
+                $value = trim($value);
+
+                $request->merge([
+                    $field => $value === '' ? null : $value,
                 ]);
             }
         }
@@ -114,8 +127,35 @@ class HealthConsultationController extends Controller
                 'string',
                 'max:10000',
             ],
+            'bp_systolic' => [
+                'bail',
+                'required_with:bp_diastolic',
+                'nullable',
+                'integer',
+                'between:1,999',
+            ],
+            'bp_diastolic' => [
+                'bail',
+                'required_with:bp_systolic',
+                'nullable',
+                'integer',
+                'between:1,999',
+            ],
             'submission_token' => ['required', 'uuid'],
             'details_confirmed' => ['accepted'],
+        ], [
+            'bp_systolic.required_with' =>
+                'Enter the systolic reading, or leave both BP fields blank.',
+            'bp_diastolic.required_with' =>
+                'Enter the diastolic reading, or leave both BP fields blank.',
+            'bp_systolic.integer' =>
+                'Systolic BP must be a whole number in mmHg.',
+            'bp_diastolic.integer' =>
+                'Diastolic BP must be a whole number in mmHg.',
+            'bp_systolic.between' =>
+                'Systolic BP must contain a number from 1 to 999.',
+            'bp_diastolic.between' =>
+                'Diastolic BP must contain a number from 1 to 999.',
         ]);
 
         try {
@@ -126,8 +166,6 @@ class HealthConsultationController extends Controller
             ) {
                 $actor = $this->authorizeHealthStaff($request);
 
-                // Lock the resident so status changes cannot silently
-                // overlap with validation and saving.
                 $resident = Resident::withTrashed()
                     ->lockForUpdate()
                     ->findOrFail($healthPatient->resident_id);
@@ -169,8 +207,6 @@ class HealthConsultationController extends Controller
                     ])->errorBag('consultation');
                 }
 
-                // Historical consultations may still be encoded after
-                // a death is recorded, but not dated after the death.
                 if (
                     $resident->isDeceased()
                     && $date > $resident->date_of_death->format('Y-m-d')
@@ -190,7 +226,11 @@ class HealthConsultationController extends Controller
                 $item->consultation_date = $date;
                 $item->reason_for_visit = $data['reason_for_visit'];
                 $item->consultation_notes =
-                    $data['consultation_notes'] ?: null;
+                    ($data['consultation_notes'] ?? null) ?: null;
+
+                $item->bp_systolic = $data['bp_systolic'] ?? null;
+                $item->bp_diastolic = $data['bp_diastolic'] ?? null;
+
                 $item->save();
 
                 $this->recordAccess(
@@ -231,7 +271,6 @@ class HealthConsultationController extends Controller
     ): RedirectResponse {
         $this->authorizeHealthStaff($request);
 
-        // A consultation from another patient cannot be used in this URL.
         abort_unless(
             (int) $consultation->health_patient_id
                 === (int) $healthPatient->id,

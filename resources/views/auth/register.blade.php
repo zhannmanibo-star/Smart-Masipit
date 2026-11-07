@@ -26,17 +26,11 @@
             border-radius: 14px;
         }
 
-        .brand {
-            color: #16634b;
-            font-weight: 750;
-            letter-spacing: 1px;
-        }
-
-        h1 { margin-bottom: 10px; line-height: 1.3; }
-        h2 { font-size: 19px; margin: 0 0 18px; }
+        .brand { color: #16634b; font-weight: 750; letter-spacing: 1px; }
         .muted { color: #60716b; }
+        h1 { line-height: 1.3; }
 
-        .notice {
+        .notice, .errors {
             padding: 16px 18px;
             margin: 24px 0;
             border: 1px solid #c6ddd2;
@@ -45,10 +39,7 @@
         }
 
         .errors {
-            padding: 16px 18px;
-            margin: 24px 0;
-            border: 1px solid #edc6c3;
-            border-radius: 8px;
+            border-color: #edc6c3;
             background: #fff2f1;
             color: #922c27;
         }
@@ -61,11 +52,7 @@
             min-width: 0;
         }
 
-        legend {
-            font-size: 19px;
-            font-weight: 700;
-            padding: 0 12px 0 0;
-        }
+        legend { font-size: 19px; font-weight: 700; }
 
         .grid {
             display: grid;
@@ -73,11 +60,7 @@
             gap: 20px;
         }
 
-        label {
-            display: block;
-            margin-bottom: 7px;
-            font-weight: 600;
-        }
+        label { display: block; margin-bottom: 7px; font-weight: 600; }
 
         input, select {
             width: 100%;
@@ -95,10 +78,7 @@
             font-weight: 400;
         }
 
-        .checkbox input {
-            width: auto;
-            margin-top: 7px;
-        }
+        .checkbox input { width: auto; margin-top: 7px; }
 
         button {
             padding: 13px 22px;
@@ -112,7 +92,6 @@
         }
 
         button:hover { background: #103f33; }
-
         a { color: #16634b; }
 
         :focus-visible {
@@ -135,7 +114,6 @@
         }
     </style>
 </head>
-
 <body>
 <main>
     <div class="brand">SMART MASIPIT</div>
@@ -144,13 +122,13 @@
     <h1>Create a resident account</h1>
 
     <p class="muted">
-        Enter your details for barangay residency verification.
+        Enter your details for barangay verification.
         Fields marked * are required.
     </p>
 
     <div class="notice">
         Your account will remain pending until the Barangay Secretary
-        or Barangay Captain verifies your application.
+        or Captain reviews your information, ID, and selfie.
         Registration does not automatically confirm residency.
     </div>
 
@@ -165,7 +143,11 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ url('/register') }}">
+    <form
+        method="POST"
+        action="{{ url('/register') }}"
+        enctype="multipart/form-data"
+    >
         @csrf
 
         <fieldset>
@@ -176,8 +158,7 @@
                     <label for="first_name">First name *</label>
                     <input id="first_name" name="first_name"
                            value="{{ old('first_name') }}"
-                           maxlength="100" autocomplete="given-name"
-                           required>
+                           maxlength="100" autocomplete="given-name" required>
                 </div>
 
                 <div>
@@ -191,8 +172,7 @@
                     <label for="last_name">Last name *</label>
                     <input id="last_name" name="last_name"
                            value="{{ old('last_name') }}"
-                           maxlength="100" autocomplete="family-name"
-                           required>
+                           maxlength="100" autocomplete="family-name" required>
                 </div>
 
                 <div>
@@ -207,12 +187,10 @@
                     <label for="sex">Sex *</label>
                     <select id="sex" name="sex" required>
                         <option value="">Select</option>
-                        <option value="Male"
-                                @selected(old('sex') === 'Male')>
+                        <option value="Male" @selected(old('sex') === 'Male')>
                             Male
                         </option>
-                        <option value="Female"
-                                @selected(old('sex') === 'Female')>
+                        <option value="Female" @selected(old('sex') === 'Female')>
                             Female
                         </option>
                     </select>
@@ -220,8 +198,7 @@
 
                 <div>
                     <label for="contact_number">Contact number</label>
-                    <input id="contact_number" type="tel"
-                           name="contact_number"
+                    <input id="contact_number" type="tel" name="contact_number"
                            value="{{ old('contact_number') }}"
                            maxlength="30" autocomplete="tel">
                 </div>
@@ -238,8 +215,7 @@
             <div class="grid">
                 <div>
                     <label for="sitio">Sitio *</label>
-                    <input id="sitio" name="sitio"
-                           value="{{ old('sitio') }}"
+                    <input id="sitio" name="sitio" value="{{ old('sitio') }}"
                            maxlength="100" required>
                 </div>
 
@@ -252,15 +228,15 @@
             </div>
         </fieldset>
 
+        @include('auth.partials.identity-fields')
+
         <fieldset>
             <legend>Login details</legend>
 
-            <div>
-                <label for="email">Email address *</label>
-                <input id="email" type="email" name="email"
-                       value="{{ old('email') }}"
-                       maxlength="255" autocomplete="username" required>
-            </div>
+            <label for="email">Email address *</label>
+            <input id="email" type="email" name="email"
+                   value="{{ old('email') }}"
+                   maxlength="255" autocomplete="username" required>
 
             <div class="grid" style="margin-top: 20px;">
                 <div>
@@ -274,20 +250,16 @@
                 </div>
 
                 <div>
-                    <label for="password_confirmation">
-                        Confirm password *
-                    </label>
+                    <label for="password_confirmation">Confirm password *</label>
                     <input id="password_confirmation" type="password"
                            name="password_confirmation"
-                           minlength="12" autocomplete="new-password"
-                           required>
+                           minlength="12" autocomplete="new-password" required>
                 </div>
             </div>
         </fieldset>
 
         <label class="checkbox">
-            <input type="checkbox" name="declaration" value="1"
-                   @checked(old('declaration')) required>
+            <input type="checkbox" name="declaration" value="1" required>
             <span>
                 I confirm that the information I provided is accurate
                 and understand that my residency must be verified

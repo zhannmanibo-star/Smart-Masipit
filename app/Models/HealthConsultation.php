@@ -12,6 +12,8 @@ class HealthConsultation extends Model
     {
         return [
             'consultation_date' => 'date',
+            'bp_systolic' => 'integer',
+            'bp_diastolic' => 'integer',
         ];
     }
 

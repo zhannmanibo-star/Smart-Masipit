@@ -529,3 +529,32 @@ Route::get('/census', [
         ->middleware('throttle:20,1')
         ->name('chatbot.reply');
 });
+
+// Pending residents may submit evidence before account approval.
+Route::middleware(['auth'])->group(function () {
+    Route::get('/account/identity', [
+        \App\Http\Controllers\IdentityEvidenceController::class,
+        'edit',
+    ])->name('account.identity.edit');
+
+    Route::post('/account/identity', [
+        \App\Http\Controllers\IdentityEvidenceController::class,
+        'store',
+    ])
+        ->middleware('throttle:5,1')
+        ->name('account.identity.store');
+});
+
+// Only authorized account reviewers may view identity images.
+Route::get('/account-verification/{application}/identity/{kind}/{version}', [
+    \App\Http\Controllers\IdentityEvidenceController::class,
+    'show',
+])
+    ->middleware([
+        'auth',
+        \App\Http\Middleware\EnsureAccountApproved::class,
+        'can:verify-residents',
+    ])
+   ->where('kind', 'id|id-back|selfie')
+    ->whereUuid('version')
+    ->name('verification.identity.show');

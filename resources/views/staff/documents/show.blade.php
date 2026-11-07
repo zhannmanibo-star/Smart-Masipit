@@ -11,498 +11,441 @@
 
 @section('content')
     @php
-        $isWalkIn = $documentRequest->source === 'walk_in';
-        $isClosed = $documentRequest->status === 'closed_not_released';
-        $isBlocked = ! empty($processingBlockReason);
-
-        $sourceLabel = [
-            'online' => 'Online',
-            'walk_in' => 'Walk-in',
-        ][$documentRequest->source] ?? 'Unknown';
-
-        $supportedDocument = array_key_exists(
-            $documentRequest->document_type,
-            \App\Models\DocumentRequest::TYPES
+        $item = $documentRequest;
+        $type = $item->document_type;
+        $supported = isset(\App\Support\CertificateDetails::CODES[$type]);
+        $blocked = ! empty($processingBlockReason);
+        $closed = $item->status === 'closed_not_released';
+        $submitted = is_array($item->request_details) ? $item->request_details : [];
+        $approved = is_array($item->approved_request_details) ? $item->approved_request_details : [];
+        $verified = ($approved['_verified'] ?? false) === true;
+        $definitions = \App\Support\CertificateDetails::fields($type);
+        $ownSubmission = (int) $item->requested_by === (int) auth()->id();
+        $ownResident = auth()->user()->resident_id !== null
+            && (int) auth()->user()->resident_id === (int) $item->resident_id;
+       $cannotDecide = $ownResident
+    || ($item->source === 'online' && $ownSubmission);
+        $cannotRelease = $ownResident || ($item->source === 'online' && $ownSubmission);
+        $supplemental = $item->status === 'approved' && ! $item->prepared_at;
+        $canPreview = $supported && (
+            $item->status === 'released'
+            || (! $blocked && in_array($item->status, ['approved', 'ready_for_release'], true))
         );
-
-        $isOwnSubmission = (int) $documentRequest->requested_by === (int) auth()->id();
-
-        $isOwnResidentRecord = auth()->user()->resident_id !== null
-            && (int) auth()->user()->resident_id === (int) $documentRequest->resident_id;
-
-        $cannotDecide = $isOwnSubmission || $isOwnResidentRecord;
-
-        $cannotRelease = $isOwnResidentRecord
-            || (! $isWalkIn && $isOwnSubmission);
-
-        $canPreview = $supportedDocument
-            && (
-                $documentRequest->status === 'released'
-                || (
-                    ! $isBlocked
-                    && in_array(
-                        $documentRequest->status,
-                        ['approved', 'ready_for_release'],
-                        true
-                    )
-                )
-            );
-
-        $canClose = $isBlocked
-            && ! $cannotDecide
-            && ! $documentRequest->released_at
-            && ! $documentRequest->closed_at
-            && in_array($documentRequest->status, [
-                'submitted',
-                'under_review',
-                'approved',
-                'ready_for_release',
+        $canClose = $blocked && ! $cannotDecide
+            && ! $item->released_at && ! $item->closed_at
+            && in_array($item->status, [
+                'submitted', 'under_review', 'approved', 'ready_for_release'
             ], true);
-
-        $fields = [
+        $profileFields = [
             'first_name' => 'First name',
             'middle_name' => 'Middle name',
             'last_name' => 'Last name',
             'birth_date' => 'Birth date',
             'sex' => 'Sex',
             'sitio' => 'Sitio',
-            'address' => 'House / Street / Purok',
+            'address' => 'Address',
         ];
+        $displayValue = function ($value) {
+            if (is_bool($value)) {
+                return $value ? 'Confirmed' : 'Not confirmed';
+            }
+            return is_scalar($value) && (string) $value !== ''
+                ? (string) $value : 'Not recorded';
+        };
     @endphp
 
-    @if ($isBlocked && ! in_array(
-        $documentRequest->status,
-        ['released', 'rejected', 'closed_not_released'],
-        true
-    ))
+    @if ($errors->any())
         <section class="card" role="alert">
-            <h2>Document processing blocked</h2>
+            <h2>Please review the following</h2>
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    @if ($blocked)
+        <section class="card" role="alert">
+            <h2>Processing blocked</h2>
             <p>{{ $processingBlockReason }}</p>
-            <p class="muted">
-                Saved details and history are retained.
-                The request status has not changed automatically.
-            </p>
         </section>
     @endif
 
     <section class="card">
-        <h2>
-            {{ $types[$documentRequest->document_type]
-                ?? $documentRequest->document_type }}
-        </h2>
+        <h2>{{ $types[$type] ?? $type }}</h2>
+        <p><strong>Status:</strong> {{ $statuses[$item->status] ?? $item->status }}</p>
+        <p><strong>Source:</strong> {{ $item->source === 'walk_in' ? 'Walk-in' : 'Online' }}</p>
+        <p><strong>Purpose:</strong></p>
+        <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $item->purpose }}</p>
 
-        <p>
-            <strong>Status:</strong>
-            {{ $statuses[$documentRequest->status]
-                ?? $documentRequest->status }}
-        </p>
-
-        <p><strong>Source:</strong> {{ $sourceLabel }}</p>
-
-        @if ($isWalkIn)
-            <p class="muted">
-                Encoded by barangay staff for a walk-in applicant.
-                The encoder is recorded in the request history.
-            </p>
+        @if ($item->status === 'rejected')
+            <p><strong>Rejection reason:</strong> {{ $item->rejection_reason }}</p>
         @endif
 
-        <strong>Purpose</strong>
-        <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $documentRequest->purpose }}</p>
-
-        @if ($isClosed)
-            <div role="status">
-                <h3>Closed — Not released</h3>
-                <p>This request is closed and cannot continue to preparation or release.</p>
-
-                <strong>Closure reason</strong>
-                <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $documentRequest->closure_reason }}</p>
-
-                <p>
-                    Closed on:
-                    {{ $documentRequest->closed_at?->copy()
-                        ->timezone('Asia/Manila')
-                        ->format('M d, Y · h:i A') ?? 'Not recorded' }}
-                    (Philippine time)
-                </p>
-
-                <p>
-                    Closed by:
-                    {{ $documentRequest->closedBy?->name ?? 'Not recorded' }}
-                </p>
-
-                <p class="muted">
-                    Preparation details and history are retained.
-                    Any existing printout for this request must not be released.
-                </p>
-            </div>
-        @elseif ($documentRequest->status === 'rejected')
-            <strong>Reason for rejection</strong>
-            <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $documentRequest->rejection_reason }}</p>
-        @elseif ($documentRequest->status === 'approved')
-            <p class="muted">
-                Approved for preparation. This does not mean the document
-                has been signed or released.
-            </p>
-        @elseif ($documentRequest->status === 'ready_for_release')
-            <p class="muted">
-                Recorded as ready for pickup. Release is subject to the
-                current eligibility checks.
-            </p>
-        @elseif ($documentRequest->status === 'released')
-            <p>Document release has been recorded.</p>
+        @if ($closed)
+            <p><strong>Closure reason:</strong> {{ $item->closure_reason }}</p>
+            <p>This request was closed without release. Its history is retained.</p>
         @endif
     </section>
 
     <section class="card">
         <h2>Resident information</h2>
-
-        @if (! $currentProfile)
-            <p class="muted">
-                The current registry record is unavailable or archived.
-                Saved submission and approval details remain below.
-            </p>
-        @endif
-
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th scope="col">Field</th>
-                        <th scope="col">At submission</th>
-                        <th scope="col">Current registry</th>
-                        @if ($documentRequest->approved_snapshot)
-                            <th scope="col">Approved details</th>
-                        @endif
+                        <th>Field</th><th>At submission</th>
+                        <th>Current registry</th><th>Approved copy</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($fields as $key => $label)
+                    @foreach ($profileFields as $field => $label)
                         <tr>
                             <th scope="row">{{ $label }}</th>
-                            <td>{{ $documentRequest->resident_snapshot[$key] ?? 'Not recorded' }}</td>
-                            <td>{{ $currentProfile[$key] ?? 'Not recorded' }}</td>
-
-                            @if ($documentRequest->approved_snapshot)
-                                <td>{{ $documentRequest->approved_snapshot[$key] ?? 'Not recorded' }}</td>
-                            @endif
+                            <td>{{ $item->resident_snapshot[$field] ?? 'Not recorded' }}</td>
+                            <td>{{ $currentProfile[$field] ?? 'Unavailable' }}</td>
+                            <td>{{ $item->approved_snapshot[$field] ?? 'Not recorded' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
-
-        <p class="muted">
-            Approval saves the reviewed resident details.
-            Certificate previews use that saved snapshot.
-        </p>
     </section>
 
-    @can('process-document-requests')
-        @if ($documentRequest->status === 'submitted')
-            <section class="card">
-                <h2>Start processing</h2>
+    <section class="card">
+        <h2>Submitted certificate details</h2>
+        <p>These details are read-only during approval.</p>
 
-                <form method="POST"
-                      action="{{ route('staff.documents.status', $documentRequest) }}">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="action" value="review">
-                    <button type="submit">Start review</button>
-                </form>
-            </section>
+        @if ($definitions)
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Detail</th><th>Submitted</th><th>Verified copy</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($definitions as $field => $definition)
+                            <tr>
+                                <th scope="row">{{ $definition['label'] }}</th>
+                                <td>{{ $displayValue($submitted[$field] ?? null) }}</td>
+                                <td>{{ $displayValue($approved[$field] ?? null) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p>Eligibility must be checked against supporting information.</p>
         @endif
-    @endcan
 
-    @if ($documentRequest->status === 'under_review')
+        <p>{{ $verified ? 'Certificate verification is recorded.' : 'Certificate verification is pending.' }}</p>
+
+        @if (! empty($approved['_signed_oath_reference']))
+            <p><strong>Verified signed oath:</strong> {{ $approved['_signed_oath_reference'] }}</p>
+        @endif
+    </section>
+
+    @if ($item->status === 'submitted')
+        <section class="card">
+            <h2>Start review</h2>
+            <form method="POST" action="{{ route('staff.documents.status', $item) }}">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="action" value="review">
+                <button type="submit">Start review</button>
+            </form>
+        </section>
+    @endif
+
+    @if ($item->status === 'under_review' || $supplemental)
         <section class="card">
             <h2>Approval decision</h2>
 
             @can('approve-document-requests')
                 @if ($cannotDecide)
-                    <p class="muted">
-                        Another authorized officer must decide a request you
-                        submitted or encoded, or a request for your own resident record.
-                    </p>
+                   <p>
+    Another authorized officer must decide a request
+    for your own resident record or your own online request.
+</p>
+                @elseif ($supplemental && ($blocked || ! $supported))
+                    <p>Certificate verification is blocked for this request.</p>
                 @else
-                    <p class="muted">
-                        Rejection reasons are visible to the applicant.
-                        Approval notes remain in staff history.
-                    </p>
-
-                    <form method="POST"
-                          action="{{ route('staff.documents.status', $documentRequest) }}"
-                          onsubmit="return confirm('Save this approval decision?');">
+                    <form method="POST" action="{{ route('staff.documents.status', $item) }}">
                         @csrf
                         @method('PATCH')
 
-                        <input type="hidden"
-                               name="resident_fingerprint"
-                               value="{{ $residentFingerprint }}">
+                        <input type="hidden" name="resident_fingerprint" value="{{ $residentFingerprint }}">
 
-                        <label for="decision_action">Decision *</label>
-                        <select id="decision_action" name="action" required>
-                            <option value="">Select a decision</option>
-
-                            @if ($currentProfile && ! $isBlocked && $supportedDocument)
-                                <option value="approve" @selected(old('action') === 'approve')>
-                                    Approve for document preparation
+                        @if ($supplemental)
+                            <input id="decision_action" type="hidden" name="action" value="review_details">
+                            <p>
+                                Verify the original submitted details and current
+                                registry information before preparation.
+                            </p>
+                        @else
+                            <label for="decision_action">Decision *</label>
+                            <select id="decision_action" name="action" required>
+                                <option value="">Select a decision</option>
+                                @if (! $blocked && $supported && $currentProfile)
+                                    <option value="approve" @selected(old('action') === 'approve')>
+                                        Approve for document preparation
+                                    </option>
+                                @endif
+                                <option value="reject" @selected(old('action') === 'reject')>
+                                    Reject
                                 </option>
+                            </select>
+                        @endif
+
+                        <fieldset id="certificate-verification" style="margin: 20px 0;">
+                            <legend>Verify the submitted information</legend>
+                            <p>
+                                If submitted details are wrong or incomplete, reject
+                                with a clear reason so a corrected request can be submitted.
+                            </p>
+
+                            <label style="display: flex; gap: 10px;">
+                                <input
+                                    type="checkbox"
+                                    name="eligibility_confirmed"
+                                    value="1"
+                                    data-approval-required
+                                    style="width: auto;"
+                                >
+                                <span>{{ \App\Support\CertificateDetails::CHECKS[$type] ?? 'I verified eligibility.' }}</span>
+                            </label>
+
+                            @if ($type === 'first_time_jobseeker_certification')
+                                <label for="signed_oath_reference">
+                                    Signed oath reference / barangay record reference *
+                                </label>
+                                <input
+                                    id="signed_oath_reference"
+                                    name="signed_oath_reference"
+                                    value="{{ old('signed_oath_reference', $approved['_signed_oath_reference'] ?? '') }}"
+                                    minlength="3"
+                                    maxlength="150"
+                                    data-approval-required
+                                >
+                                <label style="display: flex; gap: 10px;">
+                                    <input
+                                        type="checkbox"
+                                        name="signed_oath_confirmed"
+                                        value="1"
+                                        data-approval-required
+                                        style="width: auto;"
+                                    >
+                                    <span>
+                                        I inspected the signed oath and verified that
+                                        it belongs to this applicant. A draft printout
+                                        alone is not a signed oath.
+                                    </span>
+                                </label>
                             @endif
+                        </fieldset>
 
-                            <option value="reject" @selected(old('action') === 'reject')>
-                                Reject request
-                            </option>
-                        </select>
+                        <label id="decision-note-label" for="note">Approval note (optional)</label>
+                        <textarea
+                            id="note"
+                            name="note"
+                            rows="4"
+                            maxlength="2000"
+                            style="width: 100%; padding: 12px; font: inherit;"
+                        >{{ old('note') }}</textarea>
 
-                        <label for="note" style="margin-top: 18px;">
-                            Review note / Reason for rejection *
+                        <p class="muted">
+                            Approval notes are optional. A rejection reason requires
+                            at least 10 characters and is visible to the applicant.
+                        </p>
+
+                        <label style="display: flex; gap: 10px; margin: 20px 0;">
+                            <input type="checkbox" name="decision_confirmed" value="1" required style="width: auto;">
+                            <span>I reviewed the request, resident information, and decision.</span>
                         </label>
-                        <textarea id="note" name="note" rows="4"
-                                  minlength="10" maxlength="2000"
-                                  style="width: 100%; padding: 12px; font: inherit;"
-                                  required>{{ old('note') }}</textarea>
 
-                        <label style="display: flex; gap: 10px; margin: 18px 0;">
-                            <input type="checkbox" name="decision_confirmed"
-                                   value="1" style="width: auto;" required>
-                            <span>I reviewed the request, resident details, and requirements.</span>
-                        </label>
-
-                        <button type="submit">Save decision</button>
+                        <button type="submit">
+                            {{ $supplemental ? 'Save verification' : 'Save decision' }}
+                        </button>
                     </form>
                 @endif
             @else
-                <p>Awaiting a decision from the Captain or authorized approving officer.</p>
+                <p>Awaiting a Secretary, Captain, or authorized approving officer.</p>
             @endcan
         </section>
     @endif
 
-    @if ($documentRequest->prepared_at)
+    @if ($item->prepared_at)
         <section class="card">
             <h2>Saved preparation details</h2>
-            <dl>
-                <dt>Control number</dt>
-                <dd>{{ $documentRequest->control_number }}</dd>
-
-                <dt>Issuance date</dt>
-                <dd>{{ $documentRequest->issuance_date?->format('F d, Y') ?? 'Not recorded' }}</dd>
-
-                <dt>Saved signatory</dt>
-                <dd>{{ $documentRequest->signatory_name }}</dd>
-
-                <dt>Prepared on (Philippine time)</dt>
-                <dd>
-                    {{ $documentRequest->prepared_at->copy()
-                        ->timezone('Asia/Manila')->format('M d, Y · h:i A') }}
-                </dd>
-            </dl>
-
-            @if ($isClosed)
-                <p class="muted">
-                    Historical preparation details only.
-                    This closed request is not eligible for release.
+            <p><strong>Control number:</strong> {{ $item->control_number }}</p>
+            <p><strong>Issuance date:</strong> {{ $item->issuance_date?->format('F d, Y') }}</p>
+            <p><strong>Captain:</strong> {{ $item->signatory_name }}</p>
+            @if (! empty($approved['_witness_name']))
+                <p>
+                    <strong>Witness:</strong>
+                    {{ $approved['_witness_name'] }}
+                    — {{ $approved['_witness_position'] ?? '' }}
                 </p>
             @endif
+            @if (! empty($approved['_valid_until']))
+                <p><strong>Valid until:</strong> {{ $approved['_valid_until'] }}</p>
+            @endif
+            <p>
+                Prepared:
+                {{ $item->prepared_at->copy()->timezone('Asia/Manila')->format('M d, Y · h:i A') }}
+            </p>
+            @if ($closed)
+                <p>Historical details only. This document must not be released.</p>
+            @endif
         </section>
-    @elseif (
-        $documentRequest->status === 'approved'
-        && $supportedDocument
-        && ! $isBlocked
-    )
-        @can('process-document-requests')
-            <section class="card">
-                <h2>Prepare document</h2>
-                <p>
-                    Issuance date:
-                    <strong>{{ now('Asia/Manila')->format('F d, Y') }}</strong>.
-                    Save only when preparing for this date.
-                </p>
+    @elseif ($item->status === 'approved' && $supported && ! $blocked)
+        <section class="card">
+            <h2>Prepare certificate</h2>
 
-                <form method="POST"
-                      action="{{ route('staff.documents.prepare-residency', $documentRequest) }}"
-                      onsubmit="return confirm('Save the preparation details for this date?');">
+            @if (! $verified)
+                <p>An authorized officer must verify the certificate details first.</p>
+            @else
+                <p>Issuance date: {{ now('Asia/Manila')->format('F d, Y') }}</p>
+                <p>Captain: {{ $designatedCaptain?->name ?? 'No valid Captain configured' }}</p>
+
+                <form method="POST" action="{{ route('staff.documents.prepare-residency', $item) }}">
                     @csrf
 
-                    <label for="captain_display">Designated Punong Barangay</label>
-                    <input id="captain_display" type="text"
-                           value="{{ $designatedCaptain?->name ?? 'No valid Captain configured' }}"
-                           readonly>
+                    @if ($type === 'first_time_jobseeker_certification')
+                        <label for="secretary_user_id">Secretary witness *</label>
+                        <select id="secretary_user_id" name="secretary_user_id" required>
+                            <option value="">Select Secretary</option>
+                            @foreach ($secretaries as $secretary)
+                                <option value="{{ $secretary->id }}" @selected((string) old('secretary_user_id') === (string) $secretary->id)>
+                                    {{ $secretary->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @elseif ($type === 'oath_of_undertaking')
+                        <label for="witness_name">SB Member witness’s full name *</label>
+                        <input
+                            id="witness_name"
+                            name="witness_name"
+                            value="{{ old('witness_name') }}"
+                            minlength="2"
+                            maxlength="150"
+                            required
+                        >
+                    @endif
 
-                    <p class="muted">
-                        The signatory comes from the designated Captain account.
-                    </p>
+                    @if (in_array($type, ['oath_of_undertaking', 'first_time_jobseeker_certification'], true))
+                        <label style="display: flex; gap: 10px; margin: 18px 0;">
+                            <input type="checkbox" name="witness_confirmed" value="1" required style="width: auto;">
+                            <span>
+                                I verified the witness’s name and designation.
+                                Saving a name does not create a signature.
+                            </span>
+                        </label>
+                    @endif
 
                     <label style="display: flex; gap: 10px; margin: 18px 0;">
-                        <input type="checkbox" name="preparation_confirmed"
-                               value="1" style="width: auto;" required>
-                        <span>
-                            I checked the approved details, purpose,
-                            signatory, and issuance date.
-                        </span>
+                        <input type="checkbox" name="preparation_confirmed" value="1" required style="width: auto;">
+                        <span>I checked the approved details, signatory, and issuance date.</span>
                     </label>
 
                     <button type="submit" @disabled(! $designatedCaptain)>
                         Save preparation details
                     </button>
                 </form>
-            </section>
-        @endcan
+            @endif
+        </section>
     @endif
 
-    @if ($canPreview && $documentRequest->approved_snapshot)
+    @if ($canPreview && $item->approved_snapshot)
         <section class="card">
             <h2>Certificate preview</h2>
-            <p class="muted">
-                The preview uses the saved approved details.
-                The current printable template is marked DRAFT.
-            </p>
-
-            <a class="button"
-               href="{{ route('staff.documents.residency-preview', $documentRequest) }}"
-               target="_blank" rel="noopener">
+            <p>The printout remains marked DRAFT and is not valid for release.</p>
+            <a
+                class="button"
+                href="{{ route('staff.documents.residency-preview', $item) }}"
+                target="_blank"
+                rel="noopener"
+            >
                 Preview certificate
             </a>
         </section>
     @endif
 
-    @if ($documentRequest->ready_at || $documentRequest->pickup_instructions)
+    @if ($item->ready_at || $item->pickup_instructions)
         <section class="card">
             <h2>Saved pickup details</h2>
-
-            <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $documentRequest->pickup_instructions }}</p>
-
-            <p class="muted">
+            <p style="white-space: pre-wrap;">{{ $item->pickup_instructions }}</p>
+            <p>
                 Marked ready:
-                {{ $documentRequest->ready_at?->copy()
-                    ->timezone('Asia/Manila')->format('M d, Y · h:i A') ?? 'Not recorded' }}
-                (Philippine time)
+                {{ $item->ready_at?->copy()->timezone('Asia/Manila')->format('M d, Y · h:i A') ?? 'Not recorded' }}
             </p>
-
-            @if ($isClosed)
+            @if ($closed)
                 <p>These previous pickup instructions no longer apply.</p>
             @endif
         </section>
     @endif
 
     @can('process-document-requests')
-        @if (
-            $supportedDocument
-            && ! $isBlocked
-            && ! $cannotRelease
-            && $documentRequest->status === 'approved'
-            && $documentRequest->prepared_at
-        )
+        @if ($supported && ! $blocked && ! $cannotRelease && $item->status === 'approved' && $item->prepared_at)
             <section class="card">
                 <h2>Mark ready for release</h2>
                 <p>
-                    Proceed only after the final document is printed,
-                    checked, and signed. A draft is not a final document.
+                    A draft is not a final document. Actual release requires
+                    the completed document and required signatures.
                 </p>
-
-                <form method="POST"
-                      action="{{ route('staff.documents.release', $documentRequest) }}"
-                      onsubmit="return confirm('Is the completed and signed document ready for pickup?');">
+                <form method="POST" action="{{ route('staff.documents.release', $item) }}">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="action" value="ready">
-
                     <label for="pickup_instructions">Pickup instructions *</label>
                     <textarea id="pickup_instructions" name="pickup_instructions"
-                              rows="4" minlength="10" maxlength="1000"
-                              style="width: 100%; padding: 12px; font: inherit;"
-                              required>{{ old('pickup_instructions') }}</textarea>
-
-                    <p class="muted">
-                        @if ($isWalkIn)
-                            Give these instructions to the walk-in applicant directly.
-                        @else
-                            These instructions appear on My Document Requests.
-                        @endif
-                        Saving does not send an email or text message.
-                    </p>
-
+                        rows="4" minlength="10" maxlength="1000" required
+                        style="width: 100%; padding: 12px; font: inherit;">{{ old('pickup_instructions') }}</textarea>
                     <label style="display: flex; gap: 10px; margin: 18px 0;">
-                        <input type="checkbox" name="confirmation"
-                               value="1" style="width: auto;" required>
-                        <span>I checked the final document and required signature.</span>
+                        <input type="checkbox" name="confirmation" value="1" required style="width: auto;">
+                        <span>I checked the completed document and required signatures.</span>
                     </label>
-
                     <button type="submit">Mark ready for release</button>
                 </form>
             </section>
-        @elseif (
-            $supportedDocument
-            && ! $isBlocked
-            && ! $cannotRelease
-            && $documentRequest->status === 'ready_for_release'
-        )
+        @elseif ($supported && ! $blocked && ! $cannotRelease && $item->status === 'ready_for_release')
             <section class="card">
                 <h2>Record actual release</h2>
-
-                <form method="POST"
-                      action="{{ route('staff.documents.release', $documentRequest) }}"
-                      onsubmit="return confirm('Has the document actually been handed to this recipient?');">
+                <form method="POST" action="{{ route('staff.documents.release', $item) }}">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="action" value="release">
-
-                    <div class="grid">
-                        <div>
-                            <label for="received_by">Recipient's full name *</label>
-                            <input id="received_by" name="received_by"
-                                   value="{{ old('received_by') }}"
-                                   maxlength="150" required>
-                        </div>
-
-                        <div>
-                            <label for="recipient_type">Recipient type *</label>
-                            <select id="recipient_type" name="recipient_type" required>
-                                <option value="">Select recipient type</option>
-                                <option value="resident"
-                                    @selected(old('recipient_type') === 'resident')>
-                                    Resident
-                                </option>
-                                <option value="authorized_representative"
-                                    @selected(old('recipient_type') === 'authorized_representative')>
-                                    Authorized representative
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
+                    <label for="received_by">Recipient’s full name *</label>
+                    <input id="received_by" name="received_by" value="{{ old('received_by') }}" maxlength="150" required>
+                    <label for="recipient_type">Recipient type *</label>
+                    <select id="recipient_type" name="recipient_type" required>
+                        <option value="">Select recipient</option>
+                        <option value="resident" @selected(old('recipient_type') === 'resident')>Resident</option>
+                        <option value="authorized_representative" @selected(old('recipient_type') === 'authorized_representative')>
+                            Authorized representative
+                        </option>
+                    </select>
                     <label style="display: flex; gap: 10px; margin: 18px 0;">
-                        <input type="checkbox" name="confirmation"
-                               value="1" style="width: auto;" required>
-                        <span>
-                            I verified identity and authorization where applicable,
-                            and handed over the document.
-                        </span>
+                        <input type="checkbox" name="confirmation" value="1" required style="width: auto;">
+                        <span>I verified identity and authorization and handed over the document.</span>
                     </label>
-
                     <button type="submit">Confirm actual release</button>
                 </form>
             </section>
         @endif
     @endcan
 
-    @if ($documentRequest->status === 'released')
+    @if ($item->status === 'released')
         <section class="card">
             <h2>Release details</h2>
-            <p><strong>Received by:</strong> {{ $documentRequest->received_by }}</p>
-
+            <p>Received by: {{ $item->received_by }}</p>
             <p>
-                <strong>Recipient type:</strong>
-                {{ [
-                    'resident' => 'Resident',
-                    'authorized_representative' => 'Authorized representative',
-                ][$documentRequest->recipient_type] ?? 'Not recorded' }}
+                Recipient type:
+                {{ $item->recipient_type === 'authorized_representative' ? 'Authorized representative' : 'Resident' }}
             </p>
-
             <p>
-                <strong>Released on:</strong>
-                {{ $documentRequest->released_at?->copy()
-                    ->timezone('Asia/Manila')->format('M d, Y · h:i A') ?? 'Not recorded' }}
-                (Philippine time)
+                Released:
+                {{ $item->released_at?->copy()->timezone('Asia/Manila')->format('M d, Y · h:i A') }}
             </p>
         </section>
     @endif
@@ -511,102 +454,85 @@
         @if ($canClose)
             <section class="card">
                 <h2>Close blocked request without release</h2>
-
-                <p>
-                    Use this action after reviewing why the request cannot continue.
-                    Closure is final in this workflow and does not delete its records.
-                </p>
-
-                <p class="muted">
-                    The reason will be visible to the resident.
-                    If a status correction is still being reviewed,
-                    consider waiting for its outcome before closing.
-                </p>
-
-                <form method="POST"
-                      action="{{ route('staff.documents.close', $documentRequest) }}"
-                      onsubmit="return confirm('Close this request without release? This action cannot be undone through this workflow.');">
+                <p>Closure is final in this workflow. Records and history are retained.</p>
+                <form method="POST" action="{{ route('staff.documents.close', $item) }}">
                     @csrf
                     @method('PATCH')
-
-                    <input type="hidden" name="expected_status"
-                           value="{{ $documentRequest->status }}">
-
+                    <input type="hidden" name="expected_status" value="{{ $item->status }}">
                     <label for="closure_reason">Closure reason *</label>
                     <textarea id="closure_reason" name="closure_reason"
-                              rows="4" minlength="10" maxlength="2000"
-                              style="width: 100%; padding: 12px; font: inherit;"
-                              required>{{ old('closure_reason') }}</textarea>
-
+                        rows="4" minlength="10" maxlength="2000" required
+                        style="width: 100%; padding: 12px; font: inherit;">{{ old('closure_reason') }}</textarea>
                     <label style="display: flex; gap: 10px; margin: 18px 0;">
-                        <input type="checkbox" name="closure_confirmed"
-                               value="1" style="width: auto;" required>
-                        <span>
-                            I reviewed the blocking condition, confirmed that the
-                            document was not released, and verified the closure reason.
-                        </span>
+                        <input type="checkbox" name="closure_confirmed" value="1" required style="width: auto;">
+                        <span>I verified the blocking condition and confirmed that the document was not released.</span>
                     </label>
-
-                    <button type="submit" class="danger">
-                        Close — Not released
-                    </button>
+                    <button type="submit" class="danger">Close — Not released</button>
                 </form>
-            </section>
-        @elseif (
-            $isBlocked
-            && $cannotDecide
-            && in_array($documentRequest->status, [
-                'submitted', 'under_review', 'approved', 'ready_for_release',
-            ], true)
-        )
-            <section class="card">
-                <p>
-                    Another authorized approving officer must review
-                    and close this request.
-                </p>
             </section>
         @endif
     @endcan
 
     <section class="card">
         <h2>Request history</h2>
-
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr>
-                        <th scope="col">Status change</th>
-                        <th scope="col">Recorded by</th>
-                        <th scope="col">Philippine time</th>
-                        <th scope="col">Note</th>
-                    </tr>
+                    <tr><th>Status change</th><th>Recorded by</th><th>Philippine time</th><th>Note</th></tr>
                 </thead>
                 <tbody>
                     @forelse ($events as $event)
                         <tr>
                             <td>
-                                {{ $event->from_status
-                                    ? ($statuses[$event->from_status] ?? $event->from_status)
-                                    : 'New request' }}
+                                {{ $event->from_status ? ($statuses[$event->from_status] ?? $event->from_status) : 'New request' }}
                                 →
                                 {{ $statuses[$event->to_status] ?? $event->to_status }}
                             </td>
-                            <td>{{ $event->actor_name }}</td>
+                            <td>{{ $event->actor_name ?? 'Unavailable account' }}</td>
                             <td>
-                                {{ \Illuminate\Support\Carbon::parse(
-                                    $event->occurred_at,
-                                    config('app.timezone')
-                                )->timezone('Asia/Manila')->format('M d, Y · h:i A') }}
+                                {{ \Illuminate\Support\Carbon::parse($event->occurred_at, config('app.timezone'))
+                                    ->timezone('Asia/Manila')->format('M d, Y · h:i A') }}
                             </td>
                             <td style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ $event->note }}</td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="4" class="empty">No history entries recorded.</td>
-                        </tr>
+                        <tr><td colspan="4">No history recorded.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </section>
+
+    <script>
+        (() => {
+            const action = document.getElementById('decision_action');
+            const verification = document.getElementById('certificate-verification');
+            const note = document.getElementById('note');
+            const label = document.getElementById('decision-note-label');
+
+            if (!action || !verification || !note || !label) return;
+
+            function sync() {
+                const approving = ['approve', 'review_details'].includes(action.value);
+                const rejecting = action.value === 'reject';
+
+                verification.hidden = !approving;
+                verification.disabled = !approving;
+
+                verification.querySelectorAll('[data-approval-required]').forEach(field => {
+                    field.required = approving;
+                });
+
+                note.required = rejecting;
+                note.minLength = rejecting ? 10 : 1;
+                label.textContent = rejecting
+                    ? 'Reason for rejection *'
+                    : 'Approval note (optional)';
+            }
+
+            action.addEventListener('change', sync);
+            window.addEventListener('pageshow', sync);
+            sync();
+        })();
+    </script>
 @endsection

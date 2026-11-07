@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Models\ResidentApplication;
 use App\Models\User;
+use App\Support\IdentityEvidence;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Throwable;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -33,7 +35,18 @@ class CreateNewUser implements CreatesNewUsers
             $input['email'] = Str::lower(trim($input['email']));
         }
 
-        $data = Validator::make($input, [
+        foreach (['first_name', 'middle_name', 'last_name'] as $field) {
+            if (isset($input[$field]) && is_string($input[$field])) {
+                $input[$field] = Str::squish($input[$field]);
+            }
+        }
+
+        // Obtain the actual uploaded files from the HTTP request.
+      $input['id_document'] = request()->file('id_document');
+      $input['id_back'] = request()->file('id_back');
+      $input['selfie'] = request()->file('selfie');
+
+        $data = Validator::make($input, array_merge([
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -65,20 +78,16 @@ class CreateNewUser implements CreatesNewUsers
                 'confirmed',
                 function ($attribute, $value, $fail) {
                     if (strlen($value) > 72) {
-                        $fail('Please use a shorter password. '
-                            . 'The maximum is 72 bytes.');
+                        $fail(
+                            'Please use a shorter password. '
+                            . 'The maximum is 72 bytes.'
+                        );
                     }
                 },
             ],
 
             'declaration' => ['accepted'],
-        ])->validate();
-
-        foreach (['first_name', 'middle_name', 'last_name'] as $field) {
-            if (isset($data[$field])) {
-                $data[$field] = Str::squish($data[$field]);
-            }
-        }
+        ], IdentityEvidence::rules()))->validate();
 
         $name = implode(' ', array_filter([
             $data['first_name'],
@@ -91,37 +100,49 @@ class CreateNewUser implements CreatesNewUsers
             ['name' => ['required', 'string', 'max:255']]
         )->validate();
 
-        return DB::transaction(function () use ($data, $name) {
-            $user = new User();
-            $user->name = $name;
-            $user->email = $data['email'];
-            $user->password = Hash::make($data['password']);
+        $evidence = IdentityEvidence::store($data);
 
-            // These values are controlled by the server.
-            $user->role = 'resident';
-            $user->account_status = 'pending';
-            $user->resident_id = null;
-            $user->verified_by = null;
-            $user->verified_at = null;
-            $user->save();
+        try {
+            return DB::transaction(function () use ($data, $name, $evidence) {
+                $user = new User();
+                $user->name = $name;
+                $user->email = $data['email'];
+                $user->password = Hash::make($data['password']);
 
-            $application = new ResidentApplication(
-                Arr::only($data, [
-                    'first_name',
-                    'middle_name',
-                    'last_name',
-                    'birth_date',
-                    'sex',
-                    'sitio',
-                    'address',
-                    'contact_number',
-                ])
-            );
+                $user->role = 'resident';
+                $user->account_status = 'pending';
+                $user->resident_id = null;
+                $user->verified_by = null;
+                $user->verified_at = null;
+                $user->save();
 
-            $application->user_id = $user->id;
-            $application->save();
+                $application = new ResidentApplication(
+                    Arr::only($data, [
+                        'first_name',
+                        'middle_name',
+                        'last_name',
+                        'birth_date',
+                        'sex',
+                        'sitio',
+                        'address',
+                        'contact_number',
+                    ])
+                );
 
-            return $user;
-        });
+                $application->user_id = $user->id;
+
+                foreach ($evidence as $field => $value) {
+                    $application->{$field} = $value;
+                }
+
+                $application->save();
+
+                return $user;
+            });
+        } catch (Throwable $exception) {
+            IdentityEvidence::cleanup($evidence);
+
+            throw $exception;
+        }
     }
 }

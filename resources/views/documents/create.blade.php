@@ -4,12 +4,21 @@
 @section('description', 'Submit a document request using your verified resident information.')
 
 @section('actions')
-    <a class="button secondary" href="{{ route('documents.index') }}">
-        My requests
-    </a>
+    <a class="button secondary" href="{{ route('documents.index') }}">My requests</a>
 @endsection
 
 @section('content')
+    @if ($errors->any())
+        <section class="card" role="alert">
+            <h2>Please review the following</h2>
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     <section class="card">
         <h2>Your verified information</h2>
 
@@ -33,7 +42,7 @@
                         <td>{{ $resident->sitio }}</td>
                     </tr>
                     <tr>
-                        <th scope="row">Address details</th>
+                        <th scope="row">Address</th>
                         <td>{{ $resident->address ?: 'Not recorded' }}</td>
                     </tr>
                     <tr>
@@ -45,8 +54,8 @@
         </div>
 
         <p class="muted">
-            If any details are incorrect, contact the barangay office
-            for correction before submitting your request.
+            Contact the barangay office for correction if any identity
+            or address details are incorrect before submitting.
         </p>
     </section>
 
@@ -55,62 +64,7 @@
 
         <form method="POST" action="{{ route('documents.store') }}">
             @csrf
-
-            <input
-                type="hidden"
-                name="submission_token"
-                value="{{ old('submission_token', $submissionToken) }}"
-            >
-
-            <div style="margin-bottom: 20px;">
-                <label for="document_type">Document type *</label>
-
-                <select id="document_type" name="document_type" required>
-                    <option value="">Select a document</option>
-
-                    @foreach ($types as $value => $label)
-                        <option
-                            value="{{ $value }}"
-                            @selected(old('document_type') === $value)
-                        >
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <label for="purpose">Purpose of request *</label>
-
-                <textarea
-                    id="purpose"
-                    name="purpose"
-                    rows="4"
-                    minlength="5"
-                    maxlength="1000"
-                    required
-                    style="width: 100%; padding: 12px; border: 1px solid #bac8c1; border-radius: 7px; font: inherit;"
-                    placeholder="Explain where or why you need this document."
-                >{{ old('purpose') }}</textarea>
-            </div>
-
-            <label style="font-weight: 400; margin-bottom: 20px;">
-                <input
-                    type="checkbox"
-                    name="details_confirmed"
-                    value="1"
-                    required
-                >
-                I confirm that the resident information above is correct
-                and that I am requesting this document for myself.
-            </label>
-
-            <p class="muted">
-                Submission is subject to barangay review and approval.
-                It does not mean that a document has already been issued.
-            </p>
-
-            <button type="submit">Submit request</button>
+            @include('documents.partials.request-fields', ['walkIn' => false])
         </form>
     </section>
 @endsection

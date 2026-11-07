@@ -53,13 +53,14 @@ class AppServiceProvider extends ServiceProvider
                 ], true);
         });
 
-        Gate::define('approve-document-requests', function (User $user): bool {
-            return $user->canAccessServices()
-                && in_array($user->role, [
-                    'captain',
-                    'approving_officer',
-                ], true);
-        });
+      Gate::define('approve-document-requests', function (User $user): bool {
+    return $user->canAccessServices()
+        && in_array($user->role, [
+            'secretary',
+            'captain',
+            'approving_officer',
+        ], true);
+});
 
         // Health module permissions.
         Gate::define('access-health-records', function (User $user): bool {

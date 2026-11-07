@@ -16,6 +16,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use App\Notifications\AccountVerificationResult;
 use Illuminate\Support\Facades\Log;
+use App\Support\IdentityEvidence;
 
 class AccountVerificationController extends Controller
 {
@@ -219,10 +220,11 @@ public function createResident(
             . 'identity and barangay residency.',
     ]);
 
-    $resident = DB::transaction(function () use ($application) {
+   $resident = DB::transaction(function () use ($application, $request) {
         $currentApplication = ResidentApplication::query()
             ->lockForUpdate()
             ->findOrFail($application->id);
+            $this->assertIdentityReviewed($request, $currentApplication);
 
         $applicant = User::query()
             ->lockForUpdate()
@@ -387,6 +389,7 @@ public function decide(
             $reviewedAt = now();
 
             if ($data['decision'] === 'approved') {
+                $this->assertIdentityReviewed($request, $currentApplication);
                 $resident = Resident::query()
                     ->where('resident_number', $data['resident_reference'])
                     ->lockForUpdate()
@@ -415,6 +418,9 @@ public function decide(
                 $applicant->verified_by = $request->user()->id;
                 $applicant->verified_at = $reviewedAt;
                 $applicant->rejection_reason = null;
+                $currentApplication->identity_reviewed_at = $reviewedAt;
+                $currentApplication->identity_reviewed_by = $request->user()->id;
+                $currentApplication->save();
             } else {
                 $applicant->resident_id = null;
                 $applicant->verified_by = null;
@@ -493,5 +499,45 @@ return redirect()
         'success',
         $successMessage . ' An email notification has been queued.'
     );
+}
+
+private function assertIdentityReviewed(
+    Request $request,
+    ResidentApplication $application
+): void {
+    $reviewer = $request->user()->fresh();
+
+    abort_unless($reviewer, 403);
+
+    Gate::forUser($reviewer)->authorize('verify-residents');
+
+    $data = $request->validate([
+        'identity_review_confirmed' => ['accepted'],
+        'identity_evidence_version' => ['required', 'uuid'],
+    ], [
+        'identity_review_confirmed.accepted' =>
+            'Confirm that you inspected the ID front, ID back, '
+            . 'and camera selfie.',
+    ]);
+
+    if (! IdentityEvidence::available($application)) {
+        throw ValidationException::withMessages([
+            'identity' =>
+                'The applicant must submit the front and back '
+                . 'of their valid ID and a camera selfie '
+                . 'before verification can proceed.',
+        ]);
+    }
+
+    if (! hash_equals(
+        (string) $application->identity_evidence_version,
+        $data['identity_evidence_version']
+    )) {
+        throw ValidationException::withMessages([
+            'identity' =>
+                'The applicant replaced their identity images. '
+                . 'Refresh this page and review the latest images first.',
+        ]);
+    }
 }
 }

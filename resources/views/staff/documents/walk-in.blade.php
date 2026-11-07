@@ -1,167 +1,222 @@
 @extends('layouts.app')
 
 @section('title', 'Walk-in Document Request')
-@section('description', 'Select an existing resident and encode their document request.')
+@section('description', 'Encode a document request for a resident with or without an online account.')
 
 @section('actions')
-    <a class="button secondary" href="{{ route('staff.documents.index') }}">
-        Back to requests
+    <a
+        class="button secondary"
+        href="{{ route('staff.documents.index') }}"
+    >
+        Back to document requests
     </a>
 @endsection
 
 @section('content')
-    <section class="card">
-        <h2>1. Find the resident</h2>
+    @if ($errors->any())
+        <section class="card" role="alert">
+            <h2>Please review the following</h2>
 
-        <form
-            method="GET"
-            action="{{ route('staff.documents.walk-in.create') }}"
-            class="toolbar"
-            role="search"
-        >
-            <div class="search-field">
-                <label for="search">Search resident registry</label>
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
 
-                <input
-                    id="search"
-                    type="search"
-                    name="search"
-                    value="{{ $search }}"
-                    maxlength="100"
-                    placeholder="Name, sitio, or resident reference"
-                >
-            </div>
+    @if (! $selectedResident)
+        <section class="card">
+            <h2>Find the applicant</h2>
 
-            <button type="submit">Search</button>
+            <p class="muted">
+                Search the resident registry first.
+                Residents can request documents through walk-in
+                even if they do not have an online account.
+            </p>
 
-            <a
-                class="button secondary"
-                href="{{ route('staff.documents.walk-in.create') }}"
+            <form
+                method="GET"
+                action="{{ route('staff.documents.walk-in.create') }}"
+                class="toolbar"
+                role="search"
             >
-                Clear
-            </a>
-        </form>
+                <div class="search-field">
+                    <label for="search">Search residents</label>
 
-        <p class="muted">
-            Confirm the correct person using their birth date,
-            sitio, and resident reference.
-        </p>
+                    <input
+                        id="search"
+                        name="search"
+                        type="search"
+                        value="{{ $search }}"
+                        maxlength="100"
+                        placeholder="Name, sitio, or resident reference"
+                    >
+                </div>
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th scope="col">Resident</th>
-                        <th scope="col">Birth date</th>
-                        <th scope="col">Sitio</th>
-                        <th scope="col">Action</th>
-                    </tr>
-                </thead>
+                <button type="submit">Search</button>
 
-                <tbody>
-                    @forelse ($residents as $resident)
+                <a
+                    class="button secondary"
+                    href="{{ route('staff.documents.walk-in.create') }}"
+                >
+                    Clear
+                </a>
+            </form>
+
+            @can('manage-residents')
+                <div style="margin: 20px 0;">
+                    <p>
+                        If the applicant has no existing resident record,
+                        register them first.
+                    </p>
+
+                    <a
+                        class="button"
+                        href="{{ route('residents.create', [
+                            'return_to' => 'walk_in',
+                        ]) }}"
+                    >
+                        + Add resident
+                    </a>
+
+                    <p class="muted">
+                        After saving, you will return here with the
+                        new resident selected. No online account is required.
+                    </p>
+                </div>
+            @endcan
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
                         <tr>
-                            <td>
-                                <strong>
+                            <th scope="col">Resident</th>
+                            <th scope="col">Birth date</th>
+                            <th scope="col">Sitio</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @forelse ($residents as $resident)
+                            <tr>
+                                <td>
                                     {{ $resident->last_name }},
                                     {{ $resident->first_name }}
                                     {{ $resident->middle_name }}
-                                </strong>
 
-                                <div class="reference">
-                                    {{ $resident->resident_number }}
-                                </div>
-                            </td>
+                                    <div class="reference">
+                                        {{ $resident->resident_number }}
+                                    </div>
+                                </td>
 
-                            <td>
-                                {{ $resident->birth_date->format('M d, Y') }}
-                            </td>
+                                <td>
+                                    {{ $resident->birth_date->format('M d, Y') }}
+                                </td>
 
-                            <td>{{ $resident->sitio }}</td>
+                                <td>{{ $resident->sitio }}</td>
 
-                            <td>
-                                <a
-                                    class="button secondary"
-                                    href="{{ route('staff.documents.walk-in.create', [
-                                        'search' => $search,
-                                        'resident' => $resident->id,
-                                        'page' => $residents->currentPage(),
-                                    ]) }}"
-                                >
-                                    Select resident
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="empty">
-                                No matching active residents.
-                                If the person is not registered, complete
-                                resident registration and verification first.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                <td>
+                                    <a
+                                        class="button secondary"
+                                        href="{{ route('staff.documents.walk-in.create', [
+                                            'resident' => $resident->id,
+                                            'search' => $search,
+                                        ]) }}"
+                                    >
+                                        Select
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4">
+                                    No eligible residents found.
+                                    Check the spelling or try another search.
+                                    Archived residents and residents with a
+                                    recorded death are not eligible for selection.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-        @if ($residents->hasPages())
-            <nav class="pagination" aria-label="Resident search pages">
-                @if ($residents->previousPageUrl())
-                    <a href="{{ $residents->previousPageUrl() }}">
-                        Previous
-                    </a>
-                @endif
+            @if ($residents->hasPages())
+                <nav
+                    class="pagination-links"
+                    aria-label="Resident pages"
+                >
+                    @if ($residents->previousPageUrl())
+                        <a href="{{ $residents->previousPageUrl() }}">
+                            Previous
+                        </a>
+                    @endif
 
-                <span>
-                    Page {{ $residents->currentPage() }}
-                    of {{ $residents->lastPage() }}
-                </span>
+                    <span>
+                        {{ $residents->currentPage() }}
+                        / {{ $residents->lastPage() }}
+                    </span>
 
-                @if ($residents->nextPageUrl())
-                    <a href="{{ $residents->nextPageUrl() }}">
-                        Next
-                    </a>
-                @endif
-            </nav>
-        @endif
-    </section>
-
-    @if ($selectedResident)
+                    @if ($residents->nextPageUrl())
+                        <a href="{{ $residents->nextPageUrl() }}">
+                            Next
+                        </a>
+                    @endif
+                </nav>
+            @endif
+        </section>
+    @else
         <section class="card">
-            <h2>2. Confirm the selected resident</h2>
+            <h2>Selected applicant</h2>
 
-            <dl>
-                <dt>Full name</dt>
-                <dd>
+            <p>
+                <strong>
                     {{ $selectedResident->first_name }}
                     {{ $selectedResident->middle_name }}
                     {{ $selectedResident->last_name }}
-                </dd>
+                </strong>
+            </p>
 
-                <dt>Resident reference</dt>
-                <dd>{{ $selectedResident->resident_number }}</dd>
+            <p>
+                <strong>Reference:</strong>
+                {{ $selectedResident->resident_number }}
+            </p>
 
-                <dt>Birth date</dt>
-                <dd>
-                    {{ $selectedResident->birth_date->format('F d, Y') }}
-                </dd>
+            <p>
+                <strong>Birth date:</strong>
+                {{ $selectedResident->birth_date->format('M d, Y') }}
+            </p>
 
-                <dt>Sitio</dt>
-                <dd>{{ $selectedResident->sitio }}</dd>
+            <p>
+                <strong>Sitio:</strong>
+                {{ $selectedResident->sitio }}
+            </p>
 
-                <dt>House / Street / Purok</dt>
-                <dd>{{ $selectedResident->address ?: 'Not recorded' }}</dd>
-            </dl>
+            <p>
+                <strong>Address:</strong>
+                {{ $selectedResident->address ?: 'Not recorded' }}
+            </p>
+
+            <p class="muted">
+                An online account is not required for this walk-in request.
+                Confirm the applicant's identity and resident details
+                before submitting.
+            </p>
+
+            <a
+                class="button secondary"
+                href="{{ route('staff.documents.walk-in.create', [
+                    'search' => $search,
+                ]) }}"
+            >
+                Choose another resident
+            </a>
         </section>
 
         <section class="card">
-            <h2>3. Encode the request</h2>
-
-            <p class="muted">
-                This will be recorded as a walk-in request under your
-                staff account. The resident does not need an online account.
-            </p>
+            <h2>Encode document request</h2>
 
             <form
                 method="POST"
@@ -175,57 +230,10 @@
                     value="{{ $selectedResident->id }}"
                 >
 
-                <input
-                    type="hidden"
-                    name="submission_token"
-                    value="{{ old('submission_token', $submissionToken) }}"
-                >
-
-                <label for="document_type">Document type *</label>
-
-                <select id="document_type" name="document_type" required>
-                    <option value="">Select a document</option>
-
-                    @foreach ($types as $value => $label)
-                        <option
-                            value="{{ $value }}"
-                            @selected(old('document_type') === $value)
-                        >
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <div style="margin-top: 18px;">
-                    <label for="purpose">Purpose *</label>
-
-                    <textarea
-                        id="purpose"
-                        name="purpose"
-                        rows="4"
-                        minlength="5"
-                        maxlength="1000"
-                        required
-                        style="width: 100%; padding: 12px; font: inherit;"
-                    >{{ old('purpose') }}</textarea>
-                </div>
-
-                <label style="display: flex; gap: 10px; margin-top: 18px;">
-                    <input
-                        type="checkbox"
-                        name="identity_confirmed"
-                        value="1"
-                        style="width: auto;"
-                        required
-                    >
-
-                    <span>
-                        I verified the resident’s identity and confirmed
-                        the document type and purpose with the applicant.
-                    </span>
-                </label>
-
-                <button type="submit">Submit walk-in request</button>
+                @include('documents.partials.request-fields', [
+                    'resident' => $selectedResident,
+                    'walkIn' => true,
+                ])
             </form>
         </section>
     @endif

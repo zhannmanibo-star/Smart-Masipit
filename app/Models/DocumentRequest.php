@@ -11,7 +11,15 @@ class DocumentRequest extends Model
         'barangay_clearance' => 'Barangay Clearance',
         'certificate_of_indigency' => 'Certificate of Indigency',
         'certificate_of_residency' => 'Certificate of Residency',
+        'oath_of_undertaking' => 'Oath of Undertaking',
+        'first_time_jobseeker_certification' =>
+            'First-Time Jobseeker Barangay Certification',
+        'certificate_of_closure' => 'Certificate of Closure',
+        'certificate_of_good_moral' => 'Certificate of Good Moral',
+        'barangay_occupancy_permit' => 'Barangay Occupancy Permit',
     ];
+
+    public const ADDITIONAL_TYPES = [];
 
     public const STATUSES = [
         'submitted' => 'Submitted',
@@ -28,6 +36,8 @@ class DocumentRequest extends Model
         return [
             'resident_snapshot' => 'array',
             'approved_snapshot' => 'array',
+            'request_details' => 'array',
+            'approved_request_details' => 'array',
             'issuance_date' => 'date',
             'prepared_at' => 'datetime',
             'ready_at' => 'datetime',
