@@ -558,3 +558,55 @@ Route::get('/account-verification/{application}/identity/{kind}/{version}', [
    ->where('kind', 'id|id-back|selfie')
     ->whereUuid('version')
     ->name('verification.identity.show');
+
+    Route::middleware([
+    'auth',
+    \App\Http\Middleware\EnsureAccountApproved::class,
+    'can:access-health-records',
+])
+    ->prefix('health/patients/{healthPatient}/maternal')
+    ->name('health.maternal.')
+    ->where(['healthPatient' => '[0-9]+'])
+    ->group(function () {
+        Route::get('/', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'index',
+        ])->name('index');
+
+        Route::post('/', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'store',
+        ])
+            ->middleware(['can:manage-health-records', 'throttle:10,1'])
+            ->name('store');
+
+        Route::get('/{maternalRecord}', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'show',
+        ])
+            ->whereNumber('maternalRecord')
+            ->name('show');
+
+        Route::get('/{maternalRecord}/print', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'print',
+        ])
+            ->whereNumber('maternalRecord')
+            ->name('print');
+
+        Route::post('/{maternalRecord}/visits', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'visit',
+        ])
+            ->whereNumber('maternalRecord')
+            ->middleware(['can:manage-health-records', 'throttle:10,1'])
+            ->name('visits.store');
+
+        Route::post('/{maternalRecord}/addendums', [
+            \App\Http\Controllers\MaternalRecordController::class,
+            'addendum',
+        ])
+            ->whereNumber('maternalRecord')
+            ->middleware(['can:manage-health-records', 'throttle:10,1'])
+            ->name('addendums.store');
+    });

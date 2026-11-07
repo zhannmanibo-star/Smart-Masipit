@@ -170,4 +170,21 @@
         </a>
     </section>
 @endcan
+@can('access-health-records')
+    @if ($resident && $resident->sex === 'Female')
+        <section class="card">
+            <h2>Maternal Health Records</h2>
+
+            <p>
+                Register pregnancy records, record antepartum visits,
+                and print the draft maternal health form.
+            </p>
+
+            <a class="button"
+               href="{{ route('health.maternal.index', $patient) }}">
+                Open maternal records
+            </a>
+        </section>
+    @endif
+@endcan
 @endsection
