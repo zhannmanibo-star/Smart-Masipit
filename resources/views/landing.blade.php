@@ -24,9 +24,13 @@
             --white: #ffffff;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
-        html { scroll-behavior: smooth; }
+        html {
+            scroll-behavior: smooth;
+        }
 
         body {
             margin: 0;
@@ -36,9 +40,14 @@
             line-height: 1.65;
         }
 
-        a { color: inherit; }
+        a {
+            color: inherit;
+        }
 
-        button, input { font: inherit; }
+        button,
+        input {
+            font: inherit;
+        }
 
         :focus-visible {
             outline: 3px solid #a5751a;
@@ -59,7 +68,9 @@
             z-index: 20;
         }
 
-        .skip-link:focus { top: 12px; }
+        .skip-link:focus {
+            top: 12px;
+        }
 
         .location-bar {
             padding: 9px 0;
@@ -129,7 +140,9 @@
             text-decoration: none;
         }
 
-        .main-nav > a:hover { color: var(--green); }
+        .main-nav > a:not(.button):hover {
+            color: var(--green);
+        }
 
         .button {
             display: inline-flex;
@@ -159,7 +172,9 @@
             border-color: #bacdc0;
         }
 
-        .button.outline:hover { background: var(--green-light); }
+        .button.outline:hover {
+            background: var(--green-light);
+        }
 
         .button.gold {
             background: var(--gold);
@@ -167,7 +182,9 @@
             color: var(--green-dark);
         }
 
-        .button.gold:hover { background: #edcb88; }
+        .button.gold:hover {
+            background: #edcb88;
+        }
 
         .hero {
             padding: 78px 0 72px;
@@ -198,7 +215,9 @@
             font-weight: 800;
         }
 
-        h1 span { color: var(--green); }
+        h1 span {
+            color: var(--green);
+        }
 
         .hero-copy {
             max-width: 540px;
@@ -265,7 +284,10 @@
             font-weight: 700;
         }
 
-        .panel-row strong { display: block; font-size: 15px; }
+        .panel-row strong {
+            display: block;
+            font-size: 15px;
+        }
 
         .panel-row p {
             margin: 5px 0 0;
@@ -283,17 +305,32 @@
             grid-template-columns: repeat(3, 1fr);
         }
 
-        .principle { padding: 25px 24px; }
+        .principle {
+            padding: 25px 24px;
+        }
 
-        .principle + .principle { border-left: 1px solid var(--line); }
+        .principle + .principle {
+            border-left: 1px solid var(--line);
+        }
 
-        .principle strong { display: block; font-size: 15px; }
+        .principle strong {
+            display: block;
+            font-size: 15px;
+        }
 
-        .principle span { color: var(--muted); font-size: 13px; }
+        .principle span {
+            color: var(--muted);
+            font-size: 13px;
+        }
 
-        .section { padding: 76px 0; }
+        .section {
+            padding: 76px 0;
+        }
 
-        .section-heading { max-width: 660px; margin-bottom: 32px; }
+        .section-heading {
+            max-width: 660px;
+            margin-bottom: 32px;
+        }
 
         .section-heading h2 {
             margin: 0 0 14px;
@@ -302,7 +339,10 @@
             letter-spacing: -1px;
         }
 
-        .section-heading p { margin: 0; color: var(--muted); }
+        .section-heading p {
+            margin: 0;
+            color: var(--muted);
+        }
 
         .cards {
             display: grid;
@@ -324,7 +364,10 @@
             font-weight: 750;
         }
 
-        .service-card h3 { margin: 0 0 12px; font-size: 21px; }
+        .service-card h3 {
+            margin: 0 0 12px;
+            font-size: 21px;
+        }
 
         .service-card p {
             margin: 0 0 22px;
@@ -342,7 +385,9 @@
             font-weight: 650;
         }
 
-        .about-section { background: #eaf0e9; }
+        .about-section {
+            background: #eaf0e9;
+        }
 
         .about-grid {
             display: grid;
@@ -351,14 +396,19 @@
             align-items: start;
         }
 
-        .about-grid p { color: var(--muted); }
+        .about-grid p {
+            color: var(--muted);
+        }
 
         .about-note {
             padding-left: 24px;
             border-left: 3px solid var(--green);
         }
 
-        .about-note h3 { margin-top: 0; font-size: 22px; }
+        .about-note h3 {
+            margin-top: 0;
+            font-size: 22px;
+        }
 
         .faq-layout {
             display: grid;
@@ -366,7 +416,9 @@
             gap: 64px;
         }
 
-        details { border-bottom: 1px solid var(--line); }
+        details {
+            border-bottom: 1px solid var(--line);
+        }
 
         summary {
             padding: 22px 4px;
@@ -382,6 +434,71 @@
             font-size: 14px;
         }
 
+        .map-section {
+            background: var(--white);
+            border-block: 1px solid var(--line);
+            margin-bottom: 64px;
+        }
+
+        .map-layout {
+            display: grid;
+            grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+            gap: 32px;
+            align-items: center;
+        }
+
+        .map-info .eyebrow {
+            margin-bottom: 12px;
+        }
+
+        .map-info h2 {
+            margin: 0 0 18px;
+            font-size: clamp(28px, 3vw, 38px);
+            line-height: 1.2;
+            letter-spacing: -1px;
+        }
+
+        .map-info p {
+            color: var(--muted);
+        }
+
+        .map-address {
+            margin: 24px 0;
+            padding-left: 18px;
+            border-left: 3px solid var(--gold);
+            font-style: normal;
+        }
+
+        .map-address strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--green-dark);
+        }
+
+        .map-address span {
+            color: var(--muted);
+        }
+
+        .map-frame {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--green-light);
+        }
+
+        .map-frame iframe {
+            display: block;
+            width: 100%;
+            height: 440px;
+            border: 0;
+        }
+
+        .map-help {
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
         .cta {
             display: flex;
             justify-content: space-between;
@@ -393,8 +510,15 @@
             border-radius: 14px;
         }
 
-        .cta h2 { margin: 0 0 8px; font-size: 26px; }
-        .cta p { margin: 0; color: #cbdcd1; }
+        .cta h2 {
+            margin: 0 0 8px;
+            font-size: 26px;
+        }
+
+        .cta p {
+            margin: 0;
+            color: #cbdcd1;
+        }
 
         footer {
             margin-top: 64px;
@@ -411,38 +535,105 @@
             font-size: 12px;
         }
 
-        .footer-inner a { margin-left: 18px; }
+        .footer-inner a {
+            margin-left: 18px;
+        }
 
         @media (max-width: 960px) {
-            .header-inner { flex-wrap: wrap; padding-block: 20px; }
-            .hero-grid { gap: 35px; }
-            .cards { grid-template-columns: 1fr; }
-            .card-number { margin-bottom: 18px; }
-            .faq-layout { gap: 35px; }
+            .header-inner {
+                flex-wrap: wrap;
+                padding-block: 20px;
+            }
+
+            .hero-grid {
+                gap: 35px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .card-number {
+                margin-bottom: 18px;
+            }
+
+            .faq-layout {
+                gap: 35px;
+            }
         }
 
         @media (max-width: 700px) {
-            .container { width: min(100% - 32px, 1140px); }
-            .main-nav { gap: 16px; }
-            .hero { padding: 48px 0; }
+            .container {
+                width: min(calc(100% - 32px), 1140px);
+            }
+
+            .main-nav {
+                gap: 16px;
+            }
+
+            .hero {
+                padding: 48px 0;
+            }
+
             .hero-grid,
             .about-grid,
-            .faq-layout { grid-template-columns: 1fr; }
-            .welcome-panel { margin: 12px 12px 10px 0; }
-            .principles-grid { grid-template-columns: 1fr; }
-            .principle { padding: 18px 0; }
+            .faq-layout,
+            .map-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-panel {
+                margin: 12px 12px 10px 0;
+            }
+
+            .principles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .principle {
+                padding: 18px 0;
+            }
+
             .principle + .principle {
                 border-left: 0;
                 border-top: 1px solid var(--line);
             }
-            .section { padding: 50px 0; }
-            .cta { flex-direction: column; align-items: flex-start; }
-            .footer-inner a { margin-left: 0; margin-right: 18px; }
+
+            .section {
+                padding: 50px 0;
+            }
+
+            .map-layout {
+                gap: 24px;
+            }
+
+            .map-frame iframe {
+                height: 340px;
+            }
+
+            .map-section {
+                margin-bottom: 40px;
+            }
+
+            .cta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .footer-inner a {
+                margin-left: 0;
+                margin-right: 18px;
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            html { scroll-behavior: auto; }
-            .button { transition: none; }
+            html {
+                scroll-behavior: auto;
+            }
+
+            .button {
+                transition: none;
+            }
         }
     </style>
 </head>
@@ -467,7 +658,9 @@
     }
 @endphp
 
-<a class="skip-link" href="#main-content">Skip to main content</a>
+<a class="skip-link" href="#main-content">
+    Skip to main content
+</a>
 
 <div class="location-bar">
     <div class="container">
@@ -477,8 +670,11 @@
 
 <header class="site-header">
     <div class="container header-inner">
-        <a class="brand" href="{{ route('home') }}"
-           aria-label="SMART MASIPIT home">
+        <a
+            class="brand"
+            href="{{ route('home') }}"
+            aria-label="SMART MASIPIT home"
+        >
             <span class="brand-mark" aria-hidden="true">SM</span>
 
             <span>
@@ -493,6 +689,7 @@
             <a href="#services">Mga serbisyo</a>
             <a href="#about">Tungkol sa sistema</a>
             <a href="#faq">Mga tanong</a>
+            <a href="#location">Lokasyon</a>
 
             @auth
                 <a class="button" href="{{ $accountUrl }}">
@@ -552,8 +749,10 @@
                 </p>
             </div>
 
-            <aside class="welcome-panel"
-                   aria-labelledby="process-heading">
+            <aside
+                class="welcome-panel"
+                aria-labelledby="process-heading"
+            >
                 <p class="panel-label">Resident account process</p>
 
                 <h2 id="process-heading">
@@ -562,6 +761,7 @@
 
                 <div class="panel-row">
                     <span class="step-number" aria-hidden="true">01</span>
+
                     <div>
                         <strong>Mag-register</strong>
                         <p>
@@ -573,6 +773,7 @@
 
                 <div class="panel-row">
                     <span class="step-number" aria-hidden="true">02</span>
+
                     <div>
                         <strong>Magpa-verify</strong>
                         <p>
@@ -585,6 +786,7 @@
 
                 <div class="panel-row">
                     <span class="step-number" aria-hidden="true">03</span>
+
                     <div>
                         <strong>Gamitin ang available na serbisyo</strong>
                         <p>
@@ -597,7 +799,10 @@
         </div>
     </section>
 
-    <section class="principles" aria-label="Account access principles">
+    <section
+        class="principles"
+        aria-label="Account access principles"
+    >
         <div class="container principles-grid">
             <div class="principle">
                 <strong>Verified resident accounts</strong>
@@ -616,8 +821,11 @@
         </div>
     </section>
 
-    <section id="services" class="section"
-             aria-labelledby="services-heading">
+    <section
+        id="services"
+        class="section"
+        aria-labelledby="services-heading"
+    >
         <div class="container">
             <div class="section-heading">
                 <p class="eyebrow">Sakop ng SMART MASIPIT</p>
@@ -646,7 +854,9 @@
                         Kasama sa susunod na development ang household records.
                     </p>
 
-                    <span class="tag">Registry: para sa authorized staff</span>
+                    <span class="tag">
+                        Registry: para sa authorized staff
+                    </span>
                 </article>
 
                 <article class="service-card">
@@ -679,8 +889,11 @@
         </div>
     </section>
 
-    <section id="about" class="section about-section"
-             aria-labelledby="about-heading">
+    <section
+        id="about"
+        class="section about-section"
+        aria-labelledby="about-heading"
+    >
         <div class="container about-grid">
             <div class="section-heading">
                 <p class="eyebrow">Tungkol sa sistema</p>
@@ -715,11 +928,16 @@
         </div>
     </section>
 
-    <section id="faq" class="section" aria-labelledby="faq-heading">
+    <section
+        id="faq"
+        class="section"
+        aria-labelledby="faq-heading"
+    >
         <div class="container faq-layout">
             <div class="section-heading">
                 <p class="eyebrow">Bago ka magsimula</p>
                 <h2 id="faq-heading">Mga madalas itanong</h2>
+
                 <p>
                     Alamin kung paano magsimula at bakit kailangan
                     ang account verification.
@@ -728,7 +946,10 @@
 
             <div>
                 <details>
-                    <summary>Sino ang maaaring gumawa ng resident account?</summary>
+                    <summary>
+                        Sino ang maaaring gumawa ng resident account?
+                    </summary>
+
                     <p>
                         Ang resident registration ay para sa mga
                         naninirahan sa Barangay Masipit. Susuriin muna
@@ -737,7 +958,10 @@
                 </details>
 
                 <details>
-                    <summary>Automatic bang approved kapag nag-register?</summary>
+                    <summary>
+                        Automatic bang approved kapag nag-register?
+                    </summary>
+
                     <p>
                         Hindi. Pending muna ang account. Kailangang
                         ma-verify ng Barangay Secretary o Barangay Captain
@@ -746,7 +970,11 @@
                 </details>
 
                 <details>
-                    <summary>May record na ako sa barangay. Kailangan ko pa bang mag-register?</summary>
+                    <summary>
+                        May record na ako sa barangay.
+                        Kailangan ko pa bang mag-register?
+                    </summary>
+
                     <p>
                         Magkaiba ang resident record at online account.
                         Kung wala ka pang online account, kailangan mong
@@ -756,7 +984,10 @@
                 </details>
 
                 <details>
-                    <summary>Puwede ko bang makita ang records ng ibang residente?</summary>
+                    <summary>
+                        Puwede ko bang makita ang records ng ibang residente?
+                    </summary>
+
                     <p>
                         Hindi. Ang resident registry ay para sa authorized
                         barangay personnel. Ang resident account ay para
@@ -765,7 +996,10 @@
                 </details>
 
                 <details>
-                    <summary>Available na ba ang lahat ng modules?</summary>
+                    <summary>
+                        Available na ba ang lahat ng modules?
+                    </summary>
+
                     <p>
                         Hindi pa. Kasalukuyang binubuo ang sistema.
                         Ang document requests at health record module
@@ -774,7 +1008,10 @@
                 </details>
 
                 <details>
-                    <summary>Saan ako lalapit kung may maling impormasyon?</summary>
+                    <summary>
+                        Saan ako lalapit kung may maling impormasyon?
+                    </summary>
+
                     <p>
                         Makipag-ugnayan sa barangay office para ma-review
                         ang iyong impormasyon. Huwag gumawa ng maraming
@@ -785,10 +1022,73 @@
         </div>
     </section>
 
+    <section
+        id="location"
+        class="section map-section"
+        aria-labelledby="location-heading"
+    >
+        <div class="container map-layout">
+            <div class="map-info">
+                <p class="eyebrow">Bisitahin ang barangay</p>
+
+                <h2 id="location-heading">
+                    Lokasyon ng<br>
+                    Barangay Hall
+                </h2>
+
+                <p>
+                    Hanapin ang Barangay Masipit Hall para sa
+                    personal na pagproseso ng dokumento,
+                    walk-in requests, at iba pang serbisyong barangay.
+                </p>
+
+                <address class="map-address">
+                    <strong>Masipit Barangay Hall</strong>
+
+                    <span>
+                        Barangay Masipit<br>
+                        Calapan City, Oriental Mindoro<br>
+                        Philippines
+                    </span>
+                </address>
+
+                <a
+                    class="button"
+                    href="https://www.google.com/maps/dir/?api=1&amp;destination=Masipit%20Barangay%20Hall%2C%20Calapan%20City%2C%20Oriental%20Mindoro%2C%20Philippines"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Get Directions ↗
+                </a>
+
+                <p class="map-help">
+                    Magbubukas ang Google Maps sa bagong tab o sa
+                    Maps app. Ilagay ang iyong pinanggagalingan
+                    upang makita ang ruta.
+                </p>
+            </div>
+
+            <div class="map-frame">
+                <iframe
+                    title="Google Maps — Masipit Barangay Hall, Calapan City"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1940.729097764899!2d121.15762005925146!3d13.38393049008798!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33bceed75f951efd%3A0x187aa822572aa420!2sMasipit%20Barangay%20Hall!5e0!3m2!1sen!2sph!4v1794112904788!5m2!1sen!2sph"
+                    width="600"
+                    height="440"
+                    allowfullscreen
+                    loading="lazy"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                ></iframe>
+            </div>
+        </div>
+    </section>
+
     <div class="container">
         <section class="cta" aria-labelledby="cta-heading">
             <div>
-                <h2 id="cta-heading">Magsimula sa iyong resident account.</h2>
+                <h2 id="cta-heading">
+                    Magsimula sa iyong resident account.
+                </h2>
+
                 <p>
                     Magbigay ng tamang impormasyon para sa verification.
                 </p>
@@ -823,6 +1123,7 @@
         <div>
             <a href="#about">Tungkol sa sistema</a>
             <a href="#faq">Mga tanong</a>
+            <a href="#location">Lokasyon</a>
         </div>
     </div>
 </footer>
